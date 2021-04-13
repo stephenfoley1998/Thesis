@@ -1,0 +1,699 @@
+---
+title: "ST606 Thesis"
+author: "Stephen Foley"
+date: "3/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Packages
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(TraMineR)
+library(nnet)
+library(factoextra)
+library(cluster)
+library(clValid)
+library(WeightedCluster)
+```
+
+```{r}
+data("biofam")
+
+
+
+```
+
+## Renaming columns
+```{r}
+biofam <- biofam %>% rename(
+  nationality = nat_1_02
+) %>% rename(
+  language = plingu02
+) %>% rename(
+  religion = p02r01
+) %>% rename(
+  rel_participation = p02r04
+) %>% rename(
+  father_ss = cspfaj
+) %>% rename(
+  mother_ss = cspmoj
+)
+
+```
+
+## Recoding states columns and retrieving the list of possible states
+```{r}
+recode1 <- function(x){
+ifelse(x == 0, 'Parent',
+       ifelse(x == 1, 'Left',
+              ifelse(x == 2, 'Married',
+                     ifelse(x == 3, 'Left+Marr',
+                            ifelse(x == 4, 'Child',
+                                   ifelse(x == 5, 'Left+Child',
+                                          ifelse(x == 6, 'Left+Marr+Child',
+                                                 ifelse(x == 7, 'Divorced', ''))))))))
+}
+
+
+biofam[,10:25] <- apply(biofam[,10:25], 2, recode1)
+
+
+
+
+
+
+
+
+```
+
+
+## Separating sequneces from covariates
+```{r}
+biofam$sex <- as.factor(biofam$sex)
+biofam$nationality <- as.factor(biofam$nationality)
+biofam$language <- as.factor(biofam$language)
+biofam$religion <- as.factor(biofam$religion)
+biofam$rel_participation <- as.factor(biofam$rel_participation)
+biofam$father_ss <- as.factor(biofam$father_ss)
+biofam$mother_ss <- as.factor(biofam$mother_ss)
+
+
+
+biofam        <- list(covariates = biofam[c(2,6,8,9)],
+                      sequences = biofam[,10:25], 
+                      weights = biofam[,27])
+biofam.cov      <- biofam$covariates
+
+```
+
+
+## Creating state sequence object
+```{r}
+biofam.alphabet <- c('Parent', 'Left', 'Married', 'Left+Marr', 'Child', 'Left+Child', 'Left+Marr+Child', 'Divorced')
+biofam.labels <- c('Parent', 'Left', 'Married', 'Left+Marr', 'Child', 'Left+Child', 'Left+Marr+Child', 'Divorced')
+biofam.scodes <- c('P', 'L', 'M', 'L+M', 'C', 'L+C', 'L+M+C', 'D')
+biofam.seq <- seqdef(biofam$sequences, alphabet = biofam.alphabet, states = biofam.scodes,
+                     labels = biofam.labels, xstep=8)
+
+```
+
+
+## Plotting the first 10 sequences, all the sequences and the most frequent sequences
+```{r}
+par(mfrow=c(2,2))
+
+seqiplot(biofam.seq, with.legend = F, border = NA)
+seqIplot(biofam.seq, sortv='from.start', with.legend=F)
+seqfplot(biofam.seq, with.legend = F, border = NA)
+seqlegend(biofam.seq)
+
+
+```
+
+
+## Plotting the state distributions, mean time spent in each state and the modal state sequences
+```{r}
+seqdplot(biofam.seq, with.legend=T, border=NA)
+
+seqmtplot(biofam.seq, with.legend=F)
+
+seqmsplot(biofam.seq, with.legend=F, border=NA)
+
+```
+
+## Estimating substitution cost
+```{r}
+subt <- seqsubm(biofam.seq, method='TRATE')
+subc <- seqsubm(biofam.seq, method='CONSTANT')
+subf <- seqsubm(biofam.seq, method='FUTURE')
+
+subi <- seqsubm(biofam.seq, method='INDELS')
+subig <- seqsubm(biofam.seq, method='INDELSLOG')
+
+
+
+```
+
+
+## Constructing pairwise matrices using different distances measures
+```{r warning=F, message=F}
+biofam.OM <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subt)
+biofam.DHD <- seqdist(biofam.seq, method='DHD')
+biofam.OMl <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subt)
+biofam.OMsl <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subt)
+biofam.OMsp <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subt)
+biofam.H <- seqdist(biofam.seq, method='HAM')
+biofam.CH <- seqdist(biofam.seq, method='CHI2')
+biofam.EU <- seqdist(biofam.seq, method='EUCLID')
+biofam.LS <- seqdist(biofam.seq, method='LCS')
+biofam.LP <- seqdist(biofam.seq, method='LCP')
+biofam.RL <- seqdist(biofam.seq, method='RLCP')
+biofam.N <- seqdist(biofam.seq, method='NMS')
+biofam.NT <- seqdist(biofam.seq, method='NMSMST')
+biofam.SV <- seqdist(biofam.seq, method='SVRspell')
+
+
+```
+
+
+## Hierachical clustering methods
+### Using OM matrix
+```{r}
+hier.OM.W <- cluster::agnes(biofam.OM, diss=T, method='ward')
+hier.OM.A <- cluster::agnes(biofam.OM, diss=T, method='average')
+hier.OM.S <- cluster::agnes(biofam.OM, diss=T, method='single')
+hier.OM.C <- cluster::agnes(biofam.OM, diss=T, method='complete')
+hier.OM.WE <- cluster::agnes(biofam.OM, diss=T, method='weighted')
+hier.OM.GA <- cluster::agnes(biofam.OM, diss=T, method='gaverage')
+
+
+hier.OM.W1 <- list()
+hier.OM.A1 <- list()
+hier.OM.S1 <- list()
+hier.OM.C1 <- list()
+hier.OM.WE1 <- list()
+hier.OM.GA1 <- list()
+for (k in 1:20) {
+hier.OM.W1[[k]] <- cutree(hier.OM.W, k=k)
+hier.OM.A1[[k]] <- cutree(hier.OM.A, k=k)
+hier.OM.S1[[k]] <- cutree(hier.OM.S, k=k)
+hier.OM.C1[[k]] <- cutree(hier.OM.C, k=k)
+hier.OM.WE1[[k]] <- cutree(hier.OM.WE, k=k)
+hier.OM.GA1[[k]] <- cutree(hier.OM.GA, k=k)
+}
+
+```
+
+
+### Using DHD matrix
+```{r}
+hier.DHD.W <- cluster::agnes(biofam.DHD, diss=T, method='ward')
+hier.DHD.A <- cluster::agnes(biofam.DHD, diss=T, method='average')
+hier.DHD.S <- cluster::agnes(biofam.DHD, diss=T, method='single')
+hier.DHD.C <- cluster::agnes(biofam.DHD, diss=T, method='complete')
+hier.DHD.WE <- cluster::agnes(biofam.DHD, diss=T, method='weighted')
+hier.DHD.GA <- cluster::agnes(biofam.DHD, diss=T, method='gaverage')
+
+
+
+
+hier.DHD.W1 <- list()
+hier.DHD.A1 <- list()
+hier.DHD.S1 <- list()
+hier.DHD.C1 <- list()
+hier.DHD.WE1 <- list()
+hier.DHD.GA1 <- list()
+for (k in 1:20) {
+hier.DHD.W1[[k]] <- cutree(hier.DHD.W, k=k)
+hier.DHD.A1[[k]] <- cutree(hier.DHD.A, k=k)
+hier.DHD.S1[[k]] <- cutree(hier.DHD.S, k=k)
+hier.DHD.C1[[k]] <- cutree(hier.DHD.C, k=k)
+hier.DHD.WE1[[k]] <- cutree(hier.DHD.WE, k=k)
+hier.DHD.GA1[[k]] <- cutree(hier.DHD.GA, k=k)
+}
+
+```
+
+### Using OMloc matrix
+```{r}
+hier.OMl.W <- cluster::agnes(biofam.OMl, diss=T, method='ward')
+hier.OMl.A <- cluster::agnes(biofam.OMl, diss=T, method='average')
+hier.OMl.S <- cluster::agnes(biofam.OMl, diss=T, method='single')
+hier.OMl.C <- cluster::agnes(biofam.OMl, diss=T, method='complete')
+hier.OMl.WE <- cluster::agnes(biofam.OMl, diss=T, method='weighted')
+hier.OMl.GA <- cluster::agnes(biofam.OMl, diss=T, method='gaverage')
+
+
+hier.OMl.W1 <- list()
+hier.OMl.A1 <- list()
+hier.OMl.S1 <- list()
+hier.OMl.C1 <- list()
+hier.OMl.WE1 <- list()
+hier.OMl.GA1 <- list()
+for (k in 1:20) {
+hier.OMl.W1[[k]] <- cutree(hier.OMl.W, k=k)
+hier.OMl.A1[[k]] <- cutree(hier.OMl.A, k=k)
+hier.OMl.S1[[k]] <- cutree(hier.OMl.S, k=k)
+hier.OMl.C1[[k]] <- cutree(hier.OMl.C, k=k)
+hier.OMl.WE1[[k]] <- cutree(hier.OMl.WE, k=k)
+hier.OMl.GA1[[k]] <- cutree(hier.OMl.GA, k=k)
+}
+
+```
+
+### Using OMslen matrix
+```{r}
+hier.OMsl.W <- cluster::agnes(biofam.OMsl, diss=T, method='ward')
+hier.OMsl.A <- cluster::agnes(biofam.OMsl, diss=T, method='average')
+hier.OMsl.S <- cluster::agnes(biofam.OMsl, diss=T, method='single')
+hier.OMsl.C <- cluster::agnes(biofam.OMsl, diss=T, method='complete')
+hier.OMsl.WE <- cluster::agnes(biofam.OMsl, diss=T, method='weighted')
+hier.OMsl.GA <- cluster::agnes(biofam.OMsl, diss=T, method='gaverage')
+
+
+hier.OMsl.W1 <- list()
+hier.OMsl.A1 <- list()
+hier.OMsl.S1 <- list()
+hier.OMsl.C1 <- list()
+hier.OMsl.WE1 <- list()
+hier.OMsl.GA1 <- list()
+for (k in 1:20) {
+hier.OMsl.W1[[k]] <- cutree(hier.OMsl.W, k=k)
+hier.OMsl.A1[[k]] <- cutree(hier.OMsl.A, k=k)
+hier.OMsl.S1[[k]] <- cutree(hier.OMsl.S, k=k)
+hier.OMsl.C1[[k]] <- cutree(hier.OMsl.C, k=k)
+hier.OMsl.WE1[[k]] <- cutree(hier.OMsl.WE, k=k)
+hier.OMsl.GA1[[k]] <- cutree(hier.OMsl.GA, k=k)
+}
+
+```
+
+### Using OMspell matrix
+```{r}
+hier.OMsp.W <- cluster::agnes(biofam.OMsp, diss=T, method='ward')
+hier.OMsp.A <- cluster::agnes(biofam.OMsp, diss=T, method='average')
+hier.OMsp.S <- cluster::agnes(biofam.OMsp, diss=T, method='single')
+hier.OMsp.C <- cluster::agnes(biofam.OMsp, diss=T, method='complete')
+hier.OMsp.WE <- cluster::agnes(biofam.OMsp, diss=T, method='weighted')
+hier.OMsp.GA <- cluster::agnes(biofam.OMsp, diss=T, method='gaverage')
+
+
+hier.OMsp.W1 <- list()
+hier.OMsp.A1 <- list()
+hier.OMsp.S1 <- list()
+hier.OMsp.C1 <- list()
+hier.OMsp.WE1 <- list()
+hier.OMsp.GA1 <- list()
+for (k in 1:20) {
+hier.OMsp.W1[[k]] <- cutree(hier.OMsp.W, k=k)
+hier.OMsp.A1[[k]] <- cutree(hier.OMsp.A, k=k)
+hier.OMsp.S1[[k]] <- cutree(hier.OMsp.S, k=k)
+hier.OMsp.C1[[k]] <- cutree(hier.OMsp.C, k=k)
+hier.OMsp.WE1[[k]] <- cutree(hier.OMsp.WE, k=k)
+hier.OMsp.GA1[[k]] <- cutree(hier.OMsp.GA, k=k)
+}
+
+```
+
+
+### Using OMspell matrix
+```{r}
+hier.OMsp.W <- cluster::agnes(biofam.OMsp, diss=T, method='ward')
+hier.OMsp.A <- cluster::agnes(biofam.OMsp, diss=T, method='average')
+hier.OMsp.S <- cluster::agnes(biofam.OMsp, diss=T, method='single')
+hier.OMsp.C <- cluster::agnes(biofam.OMsp, diss=T, method='complete')
+hier.OMsp.WE <- cluster::agnes(biofam.OMsp, diss=T, method='weighted')
+hier.OMsp.GA <- cluster::agnes(biofam.OMsp, diss=T, method='gaverage')
+
+
+hier.OMsp.W1 <- list()
+hier.OMsp.A1 <- list()
+hier.OMsp.S1 <- list()
+hier.OMsp.C1 <- list()
+hier.OMsp.WE1 <- list()
+hier.OMsp.GA1 <- list()
+for (k in 1:20) {
+hier.OMsp.W1[[k]] <- cutree(hier.OMsp.W, k=k)
+hier.OMsp.A1[[k]] <- cutree(hier.OMsp.A, k=k)
+hier.OMsp.S1[[k]] <- cutree(hier.OMsp.S, k=k)
+hier.OMsp.C1[[k]] <- cutree(hier.OMsp.C, k=k)
+hier.OMsp.WE1[[k]] <- cutree(hier.OMsp.WE, k=k)
+hier.OMsp.GA1[[k]] <- cutree(hier.OMsp.GA, k=k)
+}
+
+```
+
+
+### Using HAM matrix
+```{r}
+hier.OMsp.W <- cluster::agnes(biofam.OMsp, diss=T, method='ward')
+hier.OMsp.A <- cluster::agnes(biofam.OMsp, diss=T, method='average')
+hier.OMsp.S <- cluster::agnes(biofam.OMsp, diss=T, method='single')
+hier.OMsp.C <- cluster::agnes(biofam.OMsp, diss=T, method='complete')
+hier.OMsp.WE <- cluster::agnes(biofam.OMsp, diss=T, method='weighted')
+hier.OMsp.GA <- cluster::agnes(biofam.OMsp, diss=T, method='gaverage')
+
+
+hier.OMsp.W1 <- list()
+hier.OMsp.A1 <- list()
+hier.OMsp.S1 <- list()
+hier.OMsp.C1 <- list()
+hier.OMsp.WE1 <- list()
+hier.OMsp.GA1 <- list()
+for (k in 1:20) {
+hier.OMsp.W1[[k]] <- cutree(hier.OMsp.W, k=k)
+hier.OMsp.A1[[k]] <- cutree(hier.OMsp.A, k=k)
+hier.OMsp.S1[[k]] <- cutree(hier.OMsp.S, k=k)
+hier.OMsp.C1[[k]] <- cutree(hier.OMsp.C, k=k)
+hier.OMsp.WE1[[k]] <- cutree(hier.OMsp.WE, k=k)
+hier.OMsp.GA1[[k]] <- cutree(hier.OMsp.GA, k=k)
+}
+
+```
+
+## K-medoids clustering
+
+```{r}
+kmedoids.OM <- list()
+kmedoids.DHD <- list()
+kmedoids.OMl <- list()
+kmedoids.OMsl <- list()
+kmedoids.OMsp <- list()
+kmedoids.H <- list()
+kmedoids.EU <-list()
+kmedoids.CH <- list()
+kmedoids.LS <- list()
+kmedoids.LP <- list()
+kmedoids.RL <- list()
+kmedoids.N <- list()
+kmedoids.NT <- list()
+kmedoids.SV <- list()
+for (k in 1:20) {
+kmedoids.OM[[k]] <- cluster::pam(biofam.OM, diss=T, k=k)
+kmedoids.DHD[[k]] <- cluster::pam(biofam.DHD, diss=T, k=k)
+kmedoids.OMl[[k]] <- cluster::pam(biofam.OMl, diss=T, k=k)
+kmedoids.OMsl[[k]] <- cluster::pam(biofam.OMsl, diss=T, k=k)
+kmedoids.OMsp[[k]] <- cluster::pam(biofam.OMsp, diss=T, k=k)
+kmedoids.H[[k]] <- cluster::pam(biofam.H, diss=T, k=k)
+kmedoids.EU[[k]] <- cluster::pam(biofam.EU, diss=T, k=k)
+kmedoids.CH[[k]] <- cluster::pam(biofam.CH, diss=T, k=k)
+kmedoids.LS[[k]] <- cluster::pam(biofam.LS, diss=T, k=k)
+kmedoids.LP[[k]] <- cluster::pam(biofam.LP, diss=T, k=k)
+kmedoids.RL[[k]] <- cluster::pam(biofam.RL, diss=T, k=k)
+kmedoids.N[[k]] <- cluster::pam(biofam.N, diss=T, k=k)
+kmedoids.NT[[k]] <- cluster::pam(biofam.NT, diss=T, k=k)
+kmedoids.SV[[k]] <- cluster::pam(biofam.SV, diss=T, k=k)
+}
+
+
+
+
+
+```
+
+
+
+## State distribution plots
+### Hierachical clusters
+```{r}
+
+seqplot(biofam.seq, type='d', group=hier.DHD.W1)
+
+seqplot(biofam.seq, type='d', group=hier.DHD.A1)
+
+seqplot(biofam.seq, type='d', group=hier.DHD.S1)
+
+seqplot(biofam.seq, type='d', group=hier.DHD.C1)
+
+seqplot(biofam.seq, type='d', group=hier.DHD.WE1)
+
+seqplot(biofam.seq, type='d', group=hier.OM.GA1)
+
+seqplot(biofam.seq, type='d', group=hier.OM.A1)
+
+seqplot(biofam.seq, type='d', group=hier.OM.S1)
+
+seqplot(biofam.seq, type='d', group=hier.OM.C1)
+
+seqplot(biofam.seq, type='d', group=hier.OM.WE1)
+
+seqplot(biofam.seq, type='d', group=hier.OM.GA1)
+
+
+
+```
+
+## K-medoid clusters
+```{r}
+seqplot(biofam.seq, type='d', group=kmedoids.DHD$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.EU$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.OMl$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.OMsl$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.OMsp$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.H$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.CH$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.EU$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.CH$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.LS$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.LP$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.RL$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.N$clustering)
+seqplot(biofam.seq, type='d', group=kmedoids.NT$clustering)
+
+```
+## model with different clustering methods
+```{r}
+fit <- multinom(kmedoids.DHD$clustering ~ ., biofam.cov, trace=F)
+coef(fit)
+
+
+```
+
+
+
+### Checking the quality of the clustering solution
+#### kmedoids
+##### Average Silhouette width - plots
+```{r}
+## OM
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OM, kmedoids.OM[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+
+## DHD
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.DHD, kmedoids.DHD[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## CH
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.CH, kmedoids.CH[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## EU
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.EU, kmedoids.EU[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## H
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.H, kmedoids.H[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## LP
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.LP, kmedoids.LP[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## LS
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.LS, kmedoids.LS[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## N
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.N, kmedoids.N[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## NT
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.NT, kmedoids.NT[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## OMl
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMl, kmedoids.OMl[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## OMsl
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsl, kmedoids.OMsl[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## OMsp
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsp, kmedoids.OMsp[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+## RL
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.RL, kmedoids.RL[[k+1]]$clustering)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n")
+axis(1, at=1:19, labels=2:20)
+
+```
+
+
+##### Quality Measures
+```{r}
+## CH
+pamRange <- wcKMedRange(biofam.CH, kvals=2:20, weights=biofam$weights)
+summary(pamRange, max.rank=2)
+
+## DHD
+pamRange1 <- wcKMedRange(biofam.DHD, kvals=2:20, weights=biofam$weights)
+summary(pamRange1, max.rank=2)
+
+## EU
+pamRange2 <- wcKMedRange(biofam.EU, kvals=2:20, weights=biofam$weights)
+summary(pamRange2, max.rank=2)
+
+## H
+pamRange3 <- wcKMedRange(biofam.H, kvals=2:20, weights=biofam$weights)
+summary(pamRange3, max.rank=2)
+
+## LP
+pamRange4 <- wcKMedRange(biofam.LP, kvals=2:20, weights=biofam$weights)
+summary(pamRange4, max.rank=2)
+
+## LS
+pamRange5 <- wcKMedRange(biofam.LS, kvals=2:20, weights=biofam$weights)
+summary(pamRange5, max.rank=2)
+
+## N
+pamRange6 <- wcKMedRange(biofam.N, kvals=2:20, weights=biofam$weights)
+summary(pamRange6, max.rank=2)
+
+## NT
+pamRange7 <- wcKMedRange(biofam.NT, kvals=2:20, weights=biofam$weights)
+summary(pamRange7, max.rank=2)
+
+## OM
+pamRange8 <- wcKMedRange(biofam.OM, kvals=2:20, weights=biofam$weights)
+summary(pamRange8, max.rank=2)
+
+## OMl
+pamRange9 <- wcKMedRange(biofam.OMl, kvals=2:20, weights=biofam$weights)
+summary(pamRange9, max.rank=2)
+
+## OMsl
+pamRange10 <- wcKMedRange(biofam.OMsl, kvals=2:20, weights=biofam$weights)
+summary(pamRange10, max.rank=2)
+
+## OMsp
+pamRange11 <- wcKMedRange(biofam.OMsp, kvals=2:20, weights=biofam$weights)
+summary(pamRange11, max.rank=2)
+
+## RL
+pamRange12 <- wcKMedRange(biofam.RL, kvals=2:20, weights=biofam$weights)
+summary(pamRange12, max.rank=2)
+
+
+
+```
+
+##### Finding the best clustering solution for each model
+```{r}
+## CH
+which.max(pamRange$stats$ASW)
+max(pamRange$stats$ASW)
+
+## DHD
+which.max(pamRange1$stats$ASW)
+max(pamRange1$stats$ASW)
+
+## EU
+which.max(pamRange2$stats$ASW)
+max(pamRange2$stats$ASW)
+
+## H
+which.max(pamRange3$stats$ASW)
+max(pamRange3$stats$ASW)
+
+## LP
+which.max(pamRange4$stats$ASW)
+max(pamRange4$stats$ASW)
+
+## LS
+which.max(pamRange5$stats$ASW)
+max(pamRange5$stats$ASW)
+
+## N
+which.max(pamRange6$stats$ASW)
+max(pamRange6$stats$ASW)
+
+## NT
+which.max(pamRange7$stats$ASW)
+max(pamRange7$stats$ASW)
+
+## OM
+which.max(pamRange8$stats$ASW)
+max(pamRange8$stats$ASW)
+
+## OMl
+which.max(pamRange9$stats$ASW)
+max(pamRange9$stats$ASW)
+
+## OMsl
+which.max(pamRange10$stats$ASW)
+max(pamRange10$stats$ASW)
+
+## OMsp
+which.max(pamRange11$stats$ASW)
+max(pamRange11$stats$ASW)
+
+## RL
+which.max(pamRange12$stats$ASW)
+max(pamRange12$stats$ASW)
+
+
+```
+
+
+#### hierarchical
+##### OM 
+```{r}
+## average
+clustQual <- as.clustrange(hier.OM.GA1, diss = biofam.OM, weights=biofam$weights, ncluster=20)
+
+
+```
+
+
+
+
