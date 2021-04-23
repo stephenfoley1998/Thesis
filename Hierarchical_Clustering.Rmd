@@ -612,7 +612,7 @@ max(ClustQual.SV.WD2$stats$ASW)
 ClustQual.CH.A$stats
 
 ## SVRspell complete
-ClustQual.SV.C$stats[19,]
+ClustQual.SV.C$stats
 
 
 

@@ -2,7 +2,9 @@
 title: "ST606 Thesis"
 author: "Stephen Foley"
 date: "3/30/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -132,7 +134,6 @@ seqmsplot(biofam.seq, with.legend=F, border=NA)
 subt <- seqsubm(biofam.seq, method='TRATE')
 subc <- seqsubm(biofam.seq, method='CONSTANT')
 subf <- seqsubm(biofam.seq, method='FUTURE')
-
 subi <- seqsubm(biofam.seq, method='INDELS')
 subig <- seqsubm(biofam.seq, method='INDELSLOG')
 
