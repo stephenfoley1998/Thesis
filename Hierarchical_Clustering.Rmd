@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: "Hierachrical Clustering"
 author: "Stephen Foley"
@@ -617,4 +618,626 @@ ClustQual.SV.C$stats
 
 
 
+=======
+---
+title: "Hierachrical Clustering"
+author: "Stephen Foley"
+date: "4/13/2021"
+output: html_document
+---
+
+## Packages
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(TraMineR)
+library(nnet)
+library(factoextra)
+library(cluster)
+library(clValid)
+library(WeightedCluster)
+```
+
+```{r}
+data("biofam")
+
+
+
+```
+
+## Renaming columns
+```{r}
+biofam <- biofam %>% rename(
+  nationality = nat_1_02
+) %>% rename(
+  language = plingu02
+) %>% rename(
+  religion = p02r01
+) %>% rename(
+  rel_participation = p02r04
+) %>% rename(
+  father_ss = cspfaj
+) %>% rename(
+  mother_ss = cspmoj
+)
+
+```
+
+## Recoding states columns and retrieving the list of possible states
+```{r}
+recode1 <- function(x){
+ifelse(x == 0, 'Parent',
+       ifelse(x == 1, 'Left',
+              ifelse(x == 2, 'Married',
+                     ifelse(x == 3, 'Left+Marr',
+                            ifelse(x == 4, 'Child',
+                                   ifelse(x == 5, 'Left+Child',
+                                          ifelse(x == 6, 'Left+Marr+Child',
+                                                 ifelse(x == 7, 'Divorced', ''))))))))
+}
+
+
+biofam[,10:25] <- apply(biofam[,10:25], 2, recode1)
+
+
+
+
+
+
+
+
+```
+
+
+
+
+## Creating state sequence object
+```{r}
+biofam.alphabet <- c('Parent', 'Left', 'Married', 'Left+Marr', 'Child', 'Left+Child', 'Left+Marr+Child', 'Divorced')
+biofam.labels <- c('Parent', 'Left', 'Married', 'Left+Marr', 'Child', 'Left+Child', 'Left+Marr+Child', 'Divorced')
+biofam.scodes <- c('P', 'L', 'M', 'L+M', 'C', 'L+C', 'L+M+C', 'D')
+
+```
+
+## Aggregating state sequences 
+```{r}
+aggBiofam <- wcAggregateCases(biofam[, 10:25])
+
+uniqueBiofam <- biofam[aggBiofam$aggIndex, 10:25]
+
+```
+
+## Creating state sequence object
+```{r}
+biofam.seq <- seqdef(uniqueBiofam, weights = aggBiofam$aggWeights)
+
+
+```
+
+## Estimating substitution cost
+```{r}
+subt <- seqsubm(biofam.seq, method='TRATE')
+subc <- seqsubm(biofam.seq, method='CONSTANT')
+subf <- seqsubm(biofam.seq, method='FUTURE')
+subi <- seqsubm(biofam.seq, method='INDELS')
+subig <- seqsubm(biofam.seq, method='INDELSLOG')
+
+
+
+```
+
+## Constructing pairwise matrices using different distances measures
+```{r warning=F, message=F}
+biofam.OM <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subt)
+biofam.DHD <- seqdist(biofam.seq, method='DHD')
+biofam.OMl <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subt)
+biofam.OMsl <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subt)
+biofam.OMsp <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subt)
+biofam.H <- seqdist(biofam.seq, method='HAM')
+biofam.CH <- seqdist(biofam.seq, method='CHI2')
+biofam.EU <- seqdist(biofam.seq, method='EUCLID')
+biofam.LS <- seqdist(biofam.seq, method='LCS')
+biofam.LP <- seqdist(biofam.seq, method='LCP')
+biofam.RL <- seqdist(biofam.seq, method='RLCP')
+biofam.N <- seqdist(biofam.seq, method='NMS')
+biofam.NT <- seqdist(biofam.seq, method='NMSMST')
+biofam.SV <- seqdist(biofam.seq, method='SVRspell')
+```
+
+## Hierachical clustering methods
+### Using OM matrix
+```{r}
+hier.OM.A <- hclust(as.dist(biofam.OM), method = "average", members = aggBiofam$aggWeights)
+hier.OM.S <- hclust(as.dist(biofam.OM), method = "single", members = aggBiofam$aggWeights)
+hier.OM.C <- hclust(as.dist(biofam.OM), method = "complete", members = aggBiofam$aggWeights)
+hier.OM.WD <- hclust(as.dist(biofam.OM), method = "ward.D", members = aggBiofam$aggWeights)
+hier.OM.M <- hclust(as.dist(biofam.OM), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.OM.MD <- hclust(as.dist(biofam.OM), method = "median", members = aggBiofam$aggWeights)
+hier.OM.WD2 <- hclust(as.dist(biofam.OM), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using DHD matrix
+```{r}
+hier.DHD.A <- hclust(as.dist(biofam.DHD), method = "average", members = aggBiofam$aggWeights)
+hier.DHD.S <- hclust(as.dist(biofam.DHD), method = "single", members = aggBiofam$aggWeights)
+hier.DHD.C <- hclust(as.dist(biofam.DHD), method = "complete", members = aggBiofam$aggWeights)
+hier.DHD.WD <- hclust(as.dist(biofam.DHD), method = "ward.D", members = aggBiofam$aggWeights)
+hier.DHD.M <- hclust(as.dist(biofam.DHD), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.DHD.MD <- hclust(as.dist(biofam.DHD), method = "median", members = aggBiofam$aggWeights)
+hier.DHD.WD2 <- hclust(as.dist(biofam.DHD), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using OMl matrix
+```{r}
+hier.OMl.A <- hclust(as.dist(biofam.OMl), method = "average", members = aggBiofam$aggWeights)
+hier.OMl.S <- hclust(as.dist(biofam.OMl), method = "single", members = aggBiofam$aggWeights)
+hier.OMl.C <- hclust(as.dist(biofam.OMl), method = "complete", members = aggBiofam$aggWeights)
+hier.OMl.WD <- hclust(as.dist(biofam.OMl), method = "ward.D", members = aggBiofam$aggWeights)
+hier.OMl.M <- hclust(as.dist(biofam.OMl), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.OMl.MD <- hclust(as.dist(biofam.OMl), method = "median", members = aggBiofam$aggWeights)
+hier.OMl.WD2 <- hclust(as.dist(biofam.OMl), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using OMsl matrix
+```{r}
+hier.OMsl.A <- hclust(as.dist(biofam.OMsl), method = "average", members = aggBiofam$aggWeights)
+hier.OMsl.S <- hclust(as.dist(biofam.OMsl), method = "single", members = aggBiofam$aggWeights)
+hier.OMsl.C <- hclust(as.dist(biofam.OMsl), method = "complete", members = aggBiofam$aggWeights)
+hier.OMsl.WD <- hclust(as.dist(biofam.OMsl), method = "ward.D", members = aggBiofam$aggWeights)
+hier.OMsl.M <- hclust(as.dist(biofam.OMsl), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.OMsl.MD <- hclust(as.dist(biofam.OMsl), method = "median", members = aggBiofam$aggWeights)
+hier.OMsl.WD2 <- hclust(as.dist(biofam.OMsl), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using OMsp matrix
+```{r}
+hier.OMsp.A <- hclust(as.dist(biofam.OMsp), method = "average", members = aggBiofam$aggWeights)
+hier.OMsp.S <- hclust(as.dist(biofam.OMsp), method = "single", members = aggBiofam$aggWeights)
+hier.OMsp.C <- hclust(as.dist(biofam.OMsp), method = "complete", members = aggBiofam$aggWeights)
+hier.OMsp.WD <- hclust(as.dist(biofam.OMsp), method = "ward.D", members = aggBiofam$aggWeights)
+hier.OMsp.M <- hclust(as.dist(biofam.OMsp), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.OMsp.MD <- hclust(as.dist(biofam.OMsp), method = "median", members = aggBiofam$aggWeights)
+hier.OMsp.WD2 <- hclust(as.dist(biofam.OMsp), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using H matrix
+```{r}
+hier.H.A <- hclust(as.dist(biofam.H), method = "average", members = aggBiofam$aggWeights)
+hier.H.S <- hclust(as.dist(biofam.H), method = "single", members = aggBiofam$aggWeights)
+hier.H.C <- hclust(as.dist(biofam.H), method = "complete", members = aggBiofam$aggWeights)
+hier.H.WD <- hclust(as.dist(biofam.H), method = "ward.D", members = aggBiofam$aggWeights)
+hier.H.M <- hclust(as.dist(biofam.H), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.H.MD <- hclust(as.dist(biofam.H), method = "median", members = aggBiofam$aggWeights)
+hier.H.WD2 <- hclust(as.dist(biofam.H), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using CH matrix
+```{r}
+hier.CH.A <- hclust(as.dist(biofam.CH), method = "average", members = aggBiofam$aggWeights)
+hier.CH.S <- hclust(as.dist(biofam.CH), method = "single", members = aggBiofam$aggWeights)
+hier.CH.C <- hclust(as.dist(biofam.CH), method = "complete", members = aggBiofam$aggWeights)
+hier.CH.WD <- hclust(as.dist(biofam.CH), method = "ward.D", members = aggBiofam$aggWeights)
+hier.CH.M <- hclust(as.dist(biofam.CH), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.CH.MD <- hclust(as.dist(biofam.CH), method = "median", members = aggBiofam$aggWeights)
+hier.CH.WD2 <- hclust(as.dist(biofam.CH), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using EU matrix
+```{r}
+hier.EU.A <- hclust(as.dist(biofam.EU), method = "average", members = aggBiofam$aggWeights)
+hier.EU.S <- hclust(as.dist(biofam.EU), method = "single", members = aggBiofam$aggWeights)
+hier.EU.C <- hclust(as.dist(biofam.EU), method = "complete", members = aggBiofam$aggWeights)
+hier.EU.WD <- hclust(as.dist(biofam.EU), method = "ward.D", members = aggBiofam$aggWeights)
+hier.EU.M <- hclust(as.dist(biofam.EU), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.EU.MD <- hclust(as.dist(biofam.EU), method = "median", members = aggBiofam$aggWeights)
+hier.EU.WD2 <- hclust(as.dist(biofam.EU), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using LS matrix
+```{r}
+hier.LS.A <- hclust(as.dist(biofam.LS), method = "average", members = aggBiofam$aggWeights)
+hier.LS.S <- hclust(as.dist(biofam.LS), method = "single", members = aggBiofam$aggWeights)
+hier.LS.C <- hclust(as.dist(biofam.LS), method = "complete", members = aggBiofam$aggWeights)
+hier.LS.WD <- hclust(as.dist(biofam.LS), method = "ward.D", members = aggBiofam$aggWeights)
+hier.LS.M <- hclust(as.dist(biofam.LS), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.LS.MD <- hclust(as.dist(biofam.LS), method = "median", members = aggBiofam$aggWeights)
+hier.LS.WD2 <- hclust(as.dist(biofam.LS), method = "ward.D2", members = aggBiofam$aggWeights)
+```
+
+### Using LP matrix
+```{r}
+hier.LP.A <- hclust(as.dist(biofam.LP), method = "average", members = aggBiofam$aggWeights)
+hier.LP.S <- hclust(as.dist(biofam.LP), method = "single", members = aggBiofam$aggWeights)
+hier.LP.C <- hclust(as.dist(biofam.LP), method = "complete", members = aggBiofam$aggWeights)
+hier.LP.WD <- hclust(as.dist(biofam.LP), method = "ward.D", members = aggBiofam$aggWeights)
+hier.LP.M <- hclust(as.dist(biofam.LP), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.LP.MD <- hclust(as.dist(biofam.LP), method = "median", members = aggBiofam$aggWeights)
+hier.LP.WD2 <- hclust(as.dist(biofam.LP), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using RL matrix
+```{r}
+hier.RL.A <- hclust(as.dist(biofam.RL), method = "average", members = aggBiofam$aggWeights)
+hier.RL.S <- hclust(as.dist(biofam.RL), method = "single", members = aggBiofam$aggWeights)
+hier.RL.C <- hclust(as.dist(biofam.RL), method = "complete", members = aggBiofam$aggWeights)
+hier.RL.WD <- hclust(as.dist(biofam.RL), method = "ward.D", members = aggBiofam$aggWeights)
+hier.RL.M <- hclust(as.dist(biofam.RL), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.RL.MD <- hclust(as.dist(biofam.RL), method = "median", members = aggBiofam$aggWeights)
+hier.RL.WD2 <- hclust(as.dist(biofam.RL), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using N matrix
+```{r}
+hier.N.A <- hclust(as.dist(biofam.N), method = "average", members = aggBiofam$aggWeights)
+hier.N.S <- hclust(as.dist(biofam.N), method = "single", members = aggBiofam$aggWeights)
+hier.N.C <- hclust(as.dist(biofam.N), method = "complete", members = aggBiofam$aggWeights)
+hier.N.WD <- hclust(as.dist(biofam.N), method = "ward.D", members = aggBiofam$aggWeights)
+hier.N.M <- hclust(as.dist(biofam.N), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.N.MD <- hclust(as.dist(biofam.N), method = "median", members = aggBiofam$aggWeights)
+hier.N.WD2 <- hclust(as.dist(biofam.N), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using NT matrix
+```{r}
+hier.NT.A <- hclust(as.dist(biofam.NT), method = "average", members = aggBiofam$aggWeights)
+hier.NT.S <- hclust(as.dist(biofam.NT), method = "single", members = aggBiofam$aggWeights)
+hier.NT.C <- hclust(as.dist(biofam.NT), method = "complete", members = aggBiofam$aggWeights)
+hier.NT.WD <- hclust(as.dist(biofam.NT), method = "ward.D", members = aggBiofam$aggWeights)
+hier.NT.M <- hclust(as.dist(biofam.NT), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.NT.MD <- hclust(as.dist(biofam.NT), method = "median", members = aggBiofam$aggWeights)
+hier.NT.WD2 <- hclust(as.dist(biofam.NT), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+### Using SV matrix
+```{r}
+hier.SV.A <- hclust(as.dist(biofam.SV), method = "average", members = aggBiofam$aggWeights)
+hier.SV.S <- hclust(as.dist(biofam.SV), method = "single", members = aggBiofam$aggWeights)
+hier.SV.C <- hclust(as.dist(biofam.SV), method = "complete", members = aggBiofam$aggWeights)
+hier.SV.WD <- hclust(as.dist(biofam.SV), method = "ward.D", members = aggBiofam$aggWeights)
+hier.SV.M <- hclust(as.dist(biofam.SV), method = "mcquitty", members = aggBiofam$aggWeights)
+hier.SV.MD <- hclust(as.dist(biofam.SV), method = "median", members = aggBiofam$aggWeights)
+hier.SV.WD2 <- hclust(as.dist(biofam.SV), method = "ward.D2", members = aggBiofam$aggWeights)
+
+```
+
+
+## Cluster Quality
+### OM matrix
+```{r}
+ClustQual.OM.A <- as.clustrange(hier.OM.A, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OM.S <- as.clustrange(hier.OM.S, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OM.C <- as.clustrange(hier.OM.C, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OM.WD <- as.clustrange(hier.OM.WD, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OM.M <- as.clustrange(hier.OM.M, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OM.MD <- as.clustrange(hier.OM.MD, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OM.WD2 <- as.clustrange(hier.OM.WD2, biofam.OM, weights = aggBiofam$aggWeights, ncluster = 20)
+
+```
+
+### DHD matrix
+```{r}
+ClustQual.DHD.A <- as.clustrange(hier.DHD.A, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.DHD.S <- as.clustrange(hier.DHD.S, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.DHD.C <- as.clustrange(hier.DHD.C, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.DHD.WD <- as.clustrange(hier.DHD.WD, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.DHD.M <- as.clustrange(hier.DHD.M, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.DHD.MD <- as.clustrange(hier.DHD.MD, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.DHD.WD2 <- as.clustrange(hier.DHD.WD2, biofam.DHD, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### OMl matrix
+```{r}
+ClustQual.OMl.A <- as.clustrange(hier.OMl.A, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMl.S <- as.clustrange(hier.OMl.S, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMl.C <- as.clustrange(hier.OMl.C, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMl.WD <- as.clustrange(hier.OMl.WD, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMl.M <- as.clustrange(hier.OMl.M, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMl.MD <- as.clustrange(hier.OMl.MD, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMl.WD2 <- as.clustrange(hier.OMl.WD2, biofam.OMl, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### OMsl matrix
+```{r}
+ClustQual.OMsl.A <- as.clustrange(hier.OMsl.A, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsl.S <- as.clustrange(hier.OMsl.S, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsl.C <- as.clustrange(hier.OMsl.C, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsl.WD <- as.clustrange(hier.OMsl.WD, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsl.M <- as.clustrange(hier.OMsl.M, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsl.MD <- as.clustrange(hier.OMsl.MD, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsl.WD2 <- as.clustrange(hier.OMsl.WD2, biofam.OMsl, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### OMsp matrix
+```{r}
+ClustQual.OMsp.A <- as.clustrange(hier.OMsp.A, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsp.S <- as.clustrange(hier.OMsp.S, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsp.C <- as.clustrange(hier.OMsp.C, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsp.WD <- as.clustrange(hier.OMsp.WD, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsp.M <- as.clustrange(hier.OMsp.M, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsp.MD <- as.clustrange(hier.OMsp.MD, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.OMsp.WD2 <- as.clustrange(hier.OMsp.WD2, biofam.OMsp, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### H matrix
+```{r}
+ClustQual.H.A <- as.clustrange(hier.H.A, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.H.S <- as.clustrange(hier.H.S, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.H.C <- as.clustrange(hier.H.C, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.H.WD <- as.clustrange(hier.H.WD, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.H.M <- as.clustrange(hier.H.M, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.H.MD <- as.clustrange(hier.H.MD, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.H.WD2 <- as.clustrange(hier.H.WD2, biofam.H, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### CH matrix
+```{r}
+ClustQual.CH.A <- as.clustrange(hier.CH.A, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.CH.S <- as.clustrange(hier.CH.S, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.CH.C <- as.clustrange(hier.CH.C, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.CH.WD <- as.clustrange(hier.CH.WD, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.CH.M <- as.clustrange(hier.CH.M, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.CH.MD <- as.clustrange(hier.CH.MD, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.CH.WD2 <- as.clustrange(hier.CH.WD2, biofam.CH, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### EU matrix
+```{r}
+ClustQual.EU.A <- as.clustrange(hier.EU.A, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.EU.S <- as.clustrange(hier.EU.S, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.EU.C <- as.clustrange(hier.EU.C, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.EU.WD <- as.clustrange(hier.EU.WD, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.EU.M <- as.clustrange(hier.EU.M, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.EU.MD <- as.clustrange(hier.EU.MD, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.EU.WD2 <- as.clustrange(hier.EU.WD2, biofam.EU, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### LS matrix
+```{r}
+ClustQual.LS.A <- as.clustrange(hier.LS.A, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LS.S <- as.clustrange(hier.LS.S, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LS.C <- as.clustrange(hier.LS.C, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LS.WD <- as.clustrange(hier.LS.WD, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LS.M <- as.clustrange(hier.LS.M, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LS.MD <- as.clustrange(hier.LS.MD, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LS.WD2 <- as.clustrange(hier.LS.WD2, biofam.LS, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### LP matrix
+```{r}
+ClustQual.LP.A <- as.clustrange(hier.LP.A, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LP.S <- as.clustrange(hier.LP.S, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LP.C <- as.clustrange(hier.LP.C, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LP.WD <- as.clustrange(hier.LP.WD, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LP.M <- as.clustrange(hier.LP.M, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LP.MD <- as.clustrange(hier.LP.MD, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.LP.WD2 <- as.clustrange(hier.LP.WD2, biofam.LP, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### RL matrix
+```{r}
+ClustQual.RL.A <- as.clustrange(hier.RL.A, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.RL.S <- as.clustrange(hier.RL.S, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.RL.C <- as.clustrange(hier.RL.C, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.RL.WD <- as.clustrange(hier.RL.WD, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.RL.M <- as.clustrange(hier.RL.M, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.RL.MD <- as.clustrange(hier.RL.MD, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.RL.WD2 <- as.clustrange(hier.RL.WD2, biofam.RL, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### N matrix
+```{r}
+ClustQual.N.A <- as.clustrange(hier.N.A, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.N.S <- as.clustrange(hier.N.S, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.N.C <- as.clustrange(hier.N.C, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.N.WD <- as.clustrange(hier.N.WD, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.N.M <- as.clustrange(hier.N.M, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.N.MD <- as.clustrange(hier.N.MD, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.N.WD2 <- as.clustrange(hier.N.WD2, biofam.N, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### NT matrix
+```{r}
+ClustQual.NT.A <- as.clustrange(hier.NT.A, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.NT.S <- as.clustrange(hier.NT.S, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.NT.C <- as.clustrange(hier.NT.C, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.NT.WD <- as.clustrange(hier.NT.WD, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.NT.M <- as.clustrange(hier.NT.M, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.NT.MD <- as.clustrange(hier.NT.MD, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.NT.WD2 <- as.clustrange(hier.NT.WD2, biofam.NT, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+### SV matrix
+```{r}
+ClustQual.SV.A <- as.clustrange(hier.SV.A, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.SV.S <- as.clustrange(hier.SV.S, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.SV.C <- as.clustrange(hier.SV.C, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.SV.WD <- as.clustrange(hier.SV.WD, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.SV.M <- as.clustrange(hier.SV.M, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.SV.MD <- as.clustrange(hier.SV.MD, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+ClustQual.SV.WD2 <- as.clustrange(hier.SV.WD2, biofam.SV, weights = aggBiofam$aggWeights, ncluster = 20)
+```
+
+
+## Finding the best clsutering solution in terms of ASW
+### OM matrix
+```{r}
+max(ClustQual.OM.A$stats$ASW)
+max(ClustQual.OM.S$stats$ASW)
+max(ClustQual.OM.C$stats$ASW)
+max(ClustQual.OM.WD$stats$ASW)
+max(ClustQual.OM.M$stats$ASW)
+max(ClustQual.OM.MD$stats$ASW)
+max(ClustQual.OM.WD2$stats$ASW)
+
+```
+
+### DHD matrix
+```{r}
+max(ClustQual.DHD.A$stats$ASW)
+max(ClustQual.DHD.S$stats$ASW)
+max(ClustQual.DHD.C$stats$ASW)
+max(ClustQual.DHD.WD$stats$ASW)
+max(ClustQual.DHD.M$stats$ASW)
+max(ClustQual.DHD.MD$stats$ASW)
+max(ClustQual.DHD.WD2$stats$ASW)
+
+```
+
+### OMl matrix
+```{r}
+max(ClustQual.OMl.A$stats$ASW)
+max(ClustQual.OMl.S$stats$ASW)
+max(ClustQual.OMl.C$stats$ASW)
+max(ClustQual.OMl.WD$stats$ASW)
+max(ClustQual.OMl.M$stats$ASW)
+max(ClustQual.OMl.MD$stats$ASW)
+max(ClustQual.OMl.WD2$stats$ASW)
+
+```
+
+### OMsp matrix
+```{r}
+max(ClustQual.OMsp.A$stats$ASW)
+max(ClustQual.OMsp.S$stats$ASW)
+max(ClustQual.OMsp.C$stats$ASW)
+max(ClustQual.OMsp.WD$stats$ASW)
+max(ClustQual.OMsp.M$stats$ASW)
+max(ClustQual.OMsp.MD$stats$ASW)
+max(ClustQual.OMsp.WD2$stats$ASW)
+
+```
+
+### H matrix
+```{r}
+max(ClustQual.H.A$stats$ASW)
+max(ClustQual.H.S$stats$ASW)
+max(ClustQual.H.C$stats$ASW)
+max(ClustQual.H.WD$stats$ASW)
+max(ClustQual.H.M$stats$ASW)
+max(ClustQual.H.MD$stats$ASW)
+max(ClustQual.H.WD2$stats$ASW)
+
+```
+
+### CH matrix
+```{r}
+max(ClustQual.CH.A$stats$ASW)
+max(ClustQual.CH.S$stats$ASW)
+max(ClustQual.CH.C$stats$ASW)
+max(ClustQual.CH.WD$stats$ASW)
+max(ClustQual.CH.M$stats$ASW)
+max(ClustQual.CH.MD$stats$ASW)
+max(ClustQual.CH.WD2$stats$ASW)
+
+```
+
+### EU matrix
+```{r}
+max(ClustQual.EU.A$stats$ASW)
+max(ClustQual.EU.S$stats$ASW)
+max(ClustQual.EU.C$stats$ASW)
+max(ClustQual.EU.WD$stats$ASW)
+max(ClustQual.EU.M$stats$ASW)
+max(ClustQual.EU.MD$stats$ASW)
+max(ClustQual.EU.WD2$stats$ASW)
+
+```
+
+### LS matrix
+```{r}
+max(ClustQual.LS.A$stats$ASW)
+max(ClustQual.LS.S$stats$ASW)
+max(ClustQual.LS.C$stats$ASW)
+max(ClustQual.LS.WD$stats$ASW)
+max(ClustQual.LS.M$stats$ASW)
+max(ClustQual.LS.MD$stats$ASW)
+max(ClustQual.LS.WD2$stats$ASW)
+
+```
+
+### LP matrix
+```{r}
+max(ClustQual.LP.A$stats$ASW)
+max(ClustQual.LP.S$stats$ASW)
+max(ClustQual.LP.C$stats$ASW)
+max(ClustQual.LP.WD$stats$ASW)
+max(ClustQual.LP.M$stats$ASW)
+max(ClustQual.LP.MD$stats$ASW)
+max(ClustQual.LP.WD2$stats$ASW)
+
+```
+
+### RL matrix
+```{r}
+max(ClustQual.RL.A$stats$ASW)
+max(ClustQual.RL.S$stats$ASW)
+max(ClustQual.RL.C$stats$ASW)
+max(ClustQual.RL.WD$stats$ASW)
+max(ClustQual.RL.M$stats$ASW)
+max(ClustQual.RL.MD$stats$ASW)
+max(ClustQual.RL.WD2$stats$ASW)
+
+```
+
+### N matrix
+```{r}
+max(ClustQual.N.A$stats$ASW)
+max(ClustQual.N.S$stats$ASW)
+max(ClustQual.N.C$stats$ASW)
+max(ClustQual.N.WD$stats$ASW)
+max(ClustQual.N.M$stats$ASW)
+max(ClustQual.N.MD$stats$ASW)
+max(ClustQual.N.WD2$stats$ASW)
+
+```
+
+### NT matrix
+```{r}
+max(ClustQual.NT.A$stats$ASW)
+max(ClustQual.NT.S$stats$ASW)
+max(ClustQual.NT.C$stats$ASW)
+max(ClustQual.NT.WD$stats$ASW)
+max(ClustQual.NT.M$stats$ASW)
+max(ClustQual.NT.MD$stats$ASW)
+max(ClustQual.NT.WD2$stats$ASW)
+
+```
+
+### SV matrix
+```{r}
+max(ClustQual.SV.A$stats$ASW)
+max(ClustQual.SV.S$stats$ASW)
+max(ClustQual.SV.C$stats$ASW)
+max(ClustQual.SV.WD$stats$ASW)
+max(ClustQual.SV.M$stats$ASW)
+max(ClustQual.SV.MD$stats$ASW)
+max(ClustQual.SV.WD2$stats$ASW)
+
+```
+
+### Best 2 clustering solutions
+```{r}
+## Chi2 Average 
+ClustQual.CH.A$stats
+
+## SVRspell complete
+ClustQual.SV.C$stats[19,]
+
+
+
+
+
+>>>>>>> 722c3af7899fcf814fdd693410fa782f31d62119
 ```
