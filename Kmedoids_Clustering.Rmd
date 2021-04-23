@@ -25,8 +25,6 @@ library(WeightedCluster)
 ```{r}
 data("biofam")
 
-
-
 ```
 
 ## Renaming columns
@@ -62,19 +60,11 @@ ifelse(x == 0, 'Parent',
 
 
 biofam[,10:25] <- apply(biofam[,10:25], 2, recode1)
-
-
-
-
-
-
-
-
 ```
 
 
 ## Separating sequneces from covariates
-```{r}
+##```{r}
 biofam$sex <- as.factor(biofam$sex)
 biofam$nationality <- as.factor(biofam$nationality)
 biofam$language <- as.factor(biofam$language)
@@ -90,6 +80,20 @@ biofam        <- list(covariates = biofam[c(2,6,8,9)],
                       weights = biofam[,27])
 biofam.cov      <- biofam$covariates
 
+##```
+
+## Aggregating state sequences 
+```{r}
+aggBiofam <- wcAggregateCases(biofam[, 10:25])
+
+uniqueBiofam <- biofam[aggBiofam$aggIndex, 10:25]
+
+```
+
+## Creating state sequence object
+```{r}
+biofam.seq <- seqdef(uniqueBiofam, weights = aggBiofam$aggWeights)
+
 ```
 
 
@@ -98,8 +102,6 @@ biofam.cov      <- biofam$covariates
 biofam.alphabet <- c('Parent', 'Left', 'Married', 'Left+Marr', 'Child', 'Left+Child', 'Left+Marr+Child', 'Divorced')
 biofam.labels <- c('Parent', 'Left', 'Married', 'Left+Marr', 'Child', 'Left+Child', 'Left+Marr+Child', 'Divorced')
 biofam.scodes <- c('P', 'L', 'M', 'L+M', 'C', 'L+C', 'L+M+C', 'D')
-biofam.seq <- seqdef(biofam$sequences, alphabet = biofam.alphabet, states = biofam.scodes,
-                     labels = biofam.labels, xstep=8)
 
 ```
 
@@ -140,15 +142,60 @@ subig <- seqsubm(biofam.seq, method='INDELSLOG')
 ```
 
 
-## Constructing pairwise matrices using different distances measures
+## Constructing pairwise matrices using different distances measures with different substitution costs
 ```{r warning=F, message=F}
-biofam.OM <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subt)
-biofam.DHD <- seqdist(biofam.seq, method='DHD')
-biofam.OMl <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subt)
-biofam.OMsl <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subt)
-biofam.OMsp <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subt)
-biofam.H <- seqdist(biofam.seq, method='HAM')
+## OM
+biofam.OM.subt <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subt)
+biofam.OM.subc <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subc)
+biofam.OM.subf <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subf)
+biofam.OM.subi <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subi)
+biofam.OM.subig <- seqdist(biofam.seq, method = 'OM', indel=1, sm=subig)
+
+## OMl
+biofam.OMl.subt <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subt)
+biofam.OMl.subc <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subc)
+biofam.OMl.subf <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subf)
+biofam.OMl.subi <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subi)
+biofam.OMl.subig <- seqdist(biofam.seq, method='OMloc', indel=1, sm=subig)
+
+## OMsl
+biofam.OMsl.subt <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subt)
+biofam.OMsl.subc <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subc)
+biofam.OMsl.subf <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subf)
+biofam.OMsl.subi <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subi)
+biofam.OMsl.subig <- seqdist(biofam.seq, method='OMslen', indel=1, sm=subig)
+
+## OMsp
+biofam.OMsp.subt <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subt)
+biofam.OMsp.subc <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subc)
+biofam.OMsp.subf <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subf)
+biofam.OMsp.subi <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subi)
+biofam.OMsp.subig <- seqdist(biofam.seq, method='OMspell', indel=1, sm=subig)
+
+## OMst
+biofam.OMst.subt <- seqdist(biofam.seq, method='OMstran', indel=1, sm=subt, otto=1)
+biofam.OMst.subc <- seqdist(biofam.seq, method='OMstran', indel=1, sm=subc, otto=1)
+biofam.OMst.subf <- seqdist(biofam.seq, method='OMstran', indel=1, sm=subf, otto=1)
+biofam.OMst.subi <- seqdist(biofam.seq, method='OMstran', indel=1, sm=subi, otto=1)
+biofam.OMst.subig <- seqdist(biofam.seq, method='OMstran', indel=1, sm=subig, otto=1)
+
+## Ham
+biofam.H.subt <- seqdist(biofam.seq, method='HAM', indel = 1, sm=subt)
+biofam.H.subc <- seqdist(biofam.seq, method='HAM', indel = 1, sm=subc)
+biofam.H.subf <- seqdist(biofam.seq, method='HAM', indel = 1, sm=subf)
+biofam.H.subi <- seqdist(biofam.seq, method='HAM', indel = 1, sm=subi)
+biofam.H.subig <- seqdist(biofam.seq, method='HAM', indel = 1, sm=subig)
+
+## TWED
+biofam.TW.subt <- seqdist(biofam.seq, method='TWED', indel=1, sm=subt, nu=0.5)
+biofam.TW.subc <- seqdist(biofam.seq, method='TWED', indel=1, sm=subc,  nu=0.5)
+biofam.TW.subf <- seqdist(biofam.seq, method='TWED', indel=1, sm=subf,  nu=0.5)
+biofam.TW.subi <- seqdist(biofam.seq, method='TWED', indel=1, sm=subi,  nu=0.5)
+biofam.TW.subig <- seqdist(biofam.seq, method='TWED', indel=1, sm=subig,  nu=0.5)
+
+
 biofam.CH <- seqdist(biofam.seq, method='CHI2')
+biofam.DHD <- seqdist(biofam.seq, method='DHD')
 biofam.EU <- seqdist(biofam.seq, method='EUCLID')
 biofam.LS <- seqdist(biofam.seq, method='LCS')
 biofam.LP <- seqdist(biofam.seq, method='LCP')
@@ -158,18 +205,96 @@ biofam.NT <- seqdist(biofam.seq, method='NMSMST')
 biofam.SV <- seqdist(biofam.seq, method='SVRspell')
 
 
+
+
 ```
 
 
 ## K-medoids clustering
+### With different substitution costs - OM, OMl, OMsl, OMsp, OMst, Ham, TWED
+```{r}
+kmedoids.OM.subt <- list()
+kmedoids.OM.subc <- list()
+kmedoids.OM.subf <- list()
+kmedoids.OM.subi <- list()
+kmedoids.OM.subig <- list()
+kmedoids.OMl.subt <- list()
+kmedoids.OMl.subc <- list()
+kmedoids.OMl.subf <- list()
+kmedoids.OMl.subi <- list()
+kmedoids.OMl.subig <- list()
+kmedoids.OMsl.subt <- list()
+kmedoids.OMsl.subc <- list()
+kmedoids.OMsl.subf <- list()
+kmedoids.OMsl.subi <- list()
+kmedoids.OMsl.subig <- list()
+kmedoids.OMsp.subt <- list()
+kmedoids.OMsp.subc <- list()
+kmedoids.OMsp.subf <- list()
+kmedoids.OMsp.subi <- list()
+kmedoids.OMsp.subig <- list()
+kmedoids.OMst.subt <- list()
+kmedoids.OMst.subc <- list()
+kmedoids.OMst.subf <- list()
+kmedoids.OMst.subi <- list()
+kmedoids.OMst.subig <- list()
+kmedoids.H.subt <- list()
+kmedoids.H.subc <- list()
+kmedoids.H.subf <- list()
+kmedoids.H.subi <- list()
+kmedoids.H.subig <- list()
+kmedoids.TW.subt <- list()
+kmedoids.TW.subc <- list()
+kmedoids.TW.subf <- list()
+kmedoids.TW.subi <- list()
+kmedoids.TW.subig <- list()
+for (k in 1:20) {
+kmedoids.OM.subt[[k]] <- cluster::pam(biofam.OM.subt, diss=T, k=k)
+kmedoids.OM.subc[[k]] <- cluster::pam(biofam.OM.subc, diss=T, k=k) 
+kmedoids.OM.subf[[k]] <- cluster::pam(biofam.OM.subf, diss=T, k=k) 
+kmedoids.OM.subi[[k]] <- cluster::pam(biofam.OM.subi, diss=T, k=k) 
+kmedoids.OM.subig[[k]] <- cluster::pam(biofam.OM.subig, diss=T, k=k) 
+kmedoids.OMl.subt[[k]] <- cluster::pam(biofam.OMl.subt, diss=T, k=k)
+kmedoids.OMl.subc[[k]] <- cluster::pam(biofam.OMl.subc, diss=T, k=k) 
+kmedoids.OMl.subf[[k]] <- cluster::pam(biofam.OMl.subf, diss=T, k=k) 
+kmedoids.OMl.subi[[k]] <- cluster::pam(biofam.OMl.subi, diss=T, k=k) 
+kmedoids.OMl.subig[[k]] <- cluster::pam(biofam.OMl.subig, diss=T, k=k)
+kmedoids.OMsl.subt[[k]] <- cluster::pam(biofam.OMsl.subt, diss=T, k=k)
+kmedoids.OMsl.subc[[k]] <- cluster::pam(biofam.OMsl.subc, diss=T, k=k) 
+kmedoids.OMsl.subf[[k]] <- cluster::pam(biofam.OMsl.subf, diss=T, k=k) 
+kmedoids.OMsl.subi[[k]] <- cluster::pam(biofam.OMsl.subi, diss=T, k=k) 
+kmedoids.OMsl.subig[[k]] <- cluster::pam(biofam.OMsl.subig, diss=T, k=k) 
+kmedoids.OMsp.subt[[k]] <- cluster::pam(biofam.OMsp.subt, diss=T, k=k)
+kmedoids.OMsp.subc[[k]] <- cluster::pam(biofam.OMsp.subc, diss=T, k=k) 
+kmedoids.OMsp.subf[[k]] <- cluster::pam(biofam.OMsp.subf, diss=T, k=k) 
+kmedoids.OMsp.subi[[k]] <- cluster::pam(biofam.OMsp.subi, diss=T, k=k) 
+kmedoids.OMsp.subig[[k]] <- cluster::pam(biofam.OMsp.subig, diss=T, k=k)  
+kmedoids.OMst.subt[[k]] <- cluster::pam(biofam.OMst.subt, diss=T, k=k)
+kmedoids.OMst.subc[[k]] <- cluster::pam(biofam.OMst.subc, diss=T, k=k) 
+kmedoids.OMst.subf[[k]] <- cluster::pam(biofam.OMst.subf, diss=T, k=k) 
+kmedoids.OMst.subi[[k]] <- cluster::pam(biofam.OMst.subi, diss=T, k=k) 
+kmedoids.OMst.subig[[k]] <- cluster::pam(biofam.OMst.subig, diss=T, k=k)  
+kmedoids.H.subt[[k]] <- cluster::pam(biofam.H.subt, diss=T, k=k)
+kmedoids.H.subc[[k]] <- cluster::pam(biofam.H.subc, diss=T, k=k) 
+kmedoids.H.subf[[k]] <- cluster::pam(biofam.H.subf, diss=T, k=k) 
+kmedoids.H.subi[[k]] <- cluster::pam(biofam.H.subi, diss=T, k=k) 
+kmedoids.H.subig[[k]] <- cluster::pam(biofam.H.subig, diss=T, k=k)  
+kmedoids.TW.subt[[k]] <- cluster::pam(biofam.TW.subt, diss=T, k=k)
+kmedoids.TW.subc[[k]] <- cluster::pam(biofam.TW.subc, diss=T, k=k) 
+kmedoids.TW.subf[[k]] <- cluster::pam(biofam.TW.subf, diss=T, k=k) 
+kmedoids.TW.subi[[k]] <- cluster::pam(biofam.TW.subi, diss=T, k=k) 
+kmedoids.TW.subig[[k]] <- cluster::pam(biofam.TW.subig, diss=T, k=k) 
+}
+
+```
+
+
+
+
+
 
 ```{r}
-kmedoids.OM <- list()
 kmedoids.DHD <- list()
-kmedoids.OMl <- list()
-kmedoids.OMsl <- list()
-kmedoids.OMsp <- list()
-kmedoids.H <- list()
 kmedoids.EU <-list()
 kmedoids.CH <- list()
 kmedoids.LS <- list()
@@ -179,12 +304,7 @@ kmedoids.N <- list()
 kmedoids.NT <- list()
 kmedoids.SV <- list()
 for (k in 1:20) {
-kmedoids.OM[[k]] <- cluster::pam(biofam.OM, diss=T, k=k)
 kmedoids.DHD[[k]] <- cluster::pam(biofam.DHD, diss=T, k=k)
-kmedoids.OMl[[k]] <- cluster::pam(biofam.OMl, diss=T, k=k)
-kmedoids.OMsl[[k]] <- cluster::pam(biofam.OMsl, diss=T, k=k)
-kmedoids.OMsp[[k]] <- cluster::pam(biofam.OMsp, diss=T, k=k)
-kmedoids.H[[k]] <- cluster::pam(biofam.H, diss=T, k=k)
 kmedoids.EU[[k]] <- cluster::pam(biofam.EU, diss=T, k=k)
 kmedoids.CH[[k]] <- cluster::pam(biofam.CH, diss=T, k=k)
 kmedoids.LS[[k]] <- cluster::pam(biofam.LS, diss=T, k=k)
@@ -194,11 +314,6 @@ kmedoids.N[[k]] <- cluster::pam(biofam.N, diss=T, k=k)
 kmedoids.NT[[k]] <- cluster::pam(biofam.NT, diss=T, k=k)
 kmedoids.SV[[k]] <- cluster::pam(biofam.SV, diss=T, k=k)
 }
-
-
-
-
-
 ```
 
 
@@ -227,216 +342,594 @@ seqplot(biofam.seq, type='d', group=kmedoids.NT$clustering)
 
 ##### Quality Measures
 ```{r}
-## CH
-pamRange <- wcKMedRange(biofam.CH, kvals=2:20, weights=biofam$weights)
-s <- summary(pamRange, max.rank=2)
-s[4,]
-
-## DHD
-pamRange1 <- wcKMedRange(biofam.DHD, kvals=2:20, weights=biofam$weights)
-s1 <- summary(pamRange1, max.rank=2)
-s1[4,]
-
-## EU
-pamRange2 <- wcKMedRange(biofam.EU, kvals=2:20, weights=biofam$weights)
-s2 <- summary(pamRange2, max.rank=2)
-s2[4,]
-
-## H
-pamRange3 <- wcKMedRange(biofam.H, kvals=2:20, weights=biofam$weights)
-s3 <- summary(pamRange3, max.rank=2)
-s3[4,]
-
-## LP
-pamRange4 <- wcKMedRange(biofam.LP, kvals=2:20, weights=biofam$weights)
-s4 <- summary(pamRange4, max.rank=2)
-s4[4,]
-
-## LS
-pamRange5 <- wcKMedRange(biofam.LS, kvals=2:20, weights=biofam$weights)
-s5 <- summary(pamRange5, max.rank=2)
-s5[4,]
-
-## N
-pamRange6 <- wcKMedRange(biofam.N, kvals=2:20, weights=biofam$weights)
-s6 <- summary(pamRange6, max.rank=2)
-s6[4,]
-
-## NT
-pamRange7 <- wcKMedRange(biofam.NT, kvals=2:20, weights=biofam$weights)
-s7 <- summary(pamRange7, max.rank=2)
-s7[4,]
-
 ## OM
-pamRange8 <- wcKMedRange(biofam.OM, kvals=2:20, weights=biofam$weights)
-s8 <- summary(pamRange8, max.rank=2)
-s8[4,]
+qual.OM.subt <- wcKMedRange(biofam.OM.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OM.subt, max.rank=2)
+
+qual.OM.subc <- wcKMedRange(biofam.OM.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OM.subc, max.rank=2)
+
+qual.OM.subf <- wcKMedRange(biofam.OM.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OM.subf, max.rank=2)
+
+qual.OM.subi <- wcKMedRange(biofam.OM.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OM.subi, max.rank=2)
+
+qual.OM.subig <- wcKMedRange(biofam.OM.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OM.subig, max.rank=2)
 
 ## OMl
-pamRange9 <- wcKMedRange(biofam.OMl, kvals=2:20, weights=biofam$weights)
-s9 <- summary(pamRange9, max.rank=2)
-s9[4,]
+qual.OMl.subt <- wcKMedRange(biofam.OMl.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMl.subt, max.rank=2)
+
+qual.OMl.subc <- wcKMedRange(biofam.OMl.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMl.subc, max.rank=2)
+
+qual.OMl.subf <- wcKMedRange(biofam.OMl.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMl.subf, max.rank=2)
+
+qual.OMl.subi <- wcKMedRange(biofam.OMl.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMl.subi, max.rank=2)
+
+qual.OMl.subig <- wcKMedRange(biofam.OMl.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMl.subig, max.rank=2)
 
 ## OMsl
-pamRange10 <- wcKMedRange(biofam.OMsl, kvals=2:20, weights=biofam$weights)
-s10 <- summary(pamRange10, max.rank=2)
-s10[4,]
+qual.OMsl.subt <- wcKMedRange(biofam.OMsl.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsl.subt, max.rank=2)
+
+qual.OMsl.subc <- wcKMedRange(biofam.OMsl.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsl.subc, max.rank=2)
+
+qual.OMsl.subf <- wcKMedRange(biofam.OMsl.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsl.subf, max.rank=2)
+
+qual.OMsl.subi <- wcKMedRange(biofam.OMsl.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsl.subi, max.rank=2)
+
+qual.OMsl.subig <- wcKMedRange(biofam.OMsl.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsl.subig, max.rank=2)
 
 ## OMsp
-pamRange11 <- wcKMedRange(biofam.OMsp, kvals=2:20, weights=biofam$weights)
-s11 <- summary(pamRange11, max.rank=2)
-s11[4,]
+qual.OMsp.subt <- wcKMedRange(biofam.OMsp.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsp.subt, max.rank=2)
 
-## RL
-pamRange12 <- wcKMedRange(biofam.RL, kvals=2:20, weights=biofam$weights)
-s12 <- summary(pamRange12, max.rank=2)
-s12[4,]
+qual.OMsp.subc <- wcKMedRange(biofam.OMsp.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsp.subc, max.rank=2)
 
-## SVR
-pamRange13 <- wcKMedRange(biofam.RL, kvals=2:20, weights=biofam$weights)
-s13 <- summary(pamRange13, max.rank=2)
-s13[4,]
+qual.OMsp.subf <- wcKMedRange(biofam.OMsp.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsp.subf, max.rank=2)
+
+qual.OMsp.subi <- wcKMedRange(biofam.OMsp.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsp.subi, max.rank=2)
+
+qual.OMsp.subig <- wcKMedRange(biofam.OMsp.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMsp.subig, max.rank=2)
+
+## OMst
+qual.OMst.subt <- wcKMedRange(biofam.OMst.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMst.subt, max.rank=2)
+
+qual.OMst.subc <- wcKMedRange(biofam.OMst.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMst.subc, max.rank=2)
+
+qual.OMst.subf <- wcKMedRange(biofam.OMst.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMst.subf, max.rank=2)
+
+qual.OMst.subi <- wcKMedRange(biofam.OMst.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMst.subi, max.rank=2)
+
+qual.OMst.subig <- wcKMedRange(biofam.OMst.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.OMst.subig, max.rank=2)
+
+## Ham
+qual.H.subt <- wcKMedRange(biofam.H.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.H.subt, max.rank=2)
+
+qual.H.subc <- wcKMedRange(biofam.H.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.H.subc, max.rank=2)
+
+qual.H.subf <- wcKMedRange(biofam.H.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.H.subf, max.rank=2)
+
+qual.H.subi <- wcKMedRange(biofam.H.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.H.subi, max.rank=2)
+
+qual.H.subig <- wcKMedRange(biofam.H.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.H.subig, max.rank=2)
+
+## TWED
+qual.TW.subt <- wcKMedRange(biofam.TW.subt, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.TW.subt, max.rank=2)
+
+qual.TW.subc <- wcKMedRange(biofam.TW.subc, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.TW.subc, max.rank=2)
+
+qual.TW.subf <- wcKMedRange(biofam.TW.subf, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.TW.subf, max.rank=2)
+
+qual.TW.subi <- wcKMedRange(biofam.TW.subi, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.TW.subi, max.rank=2)
+
+qual.TW.subig <- wcKMedRange(biofam.TW.subig, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.TW.subig, max.rank=2)
 
 
 
 ```
 
-##### Best Solutions
-```{r}
-## DHD
-pamRange1$stats
 
-## HAM
-pamRange3$stats
+```{r}
+## CH
+qual.CH <- wcKMedRange(biofam.CH, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.CH, max.rank=2)
+
+
+## DHD
+qual.DHD <- wcKMedRange(biofam.DHD, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.DHD, max.rank=2)
+
+
+## EU
+qual.EU <- wcKMedRange(biofam.EU, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.EU, max.rank=2)
+
+
+## LP
+qual.LP <- wcKMedRange(biofam.LP, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.LP, max.rank=2)
+
 
 ## LS
-pamRange5$stats
+qual.LS <- wcKMedRange(biofam.LS, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.LS, max.rank=2)
+
 
 ## N
-pamRange6$stats
+qual.N <- wcKMedRange(biofam.N, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.N, max.rank=2)
 
-## OM
-pamRange8$stats
 
-## OMl
-pamRange9$stats
+## NT
+qual.NT <- wcKMedRange(biofam.NT, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.NT, max.rank=2)
 
-## OMs9
-pamRange11$stats
+
+## RL
+qual.RL <- wcKMedRange(biofam.RL, kvals=2:20, weights=aggBiofam$aggWeights)
+summary(qual.RL, max.rank=2)
 
 
 ```
+
+
 
 ##### Average Silhouette width - plots
 ```{r}
 ## OM
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.OM, kmedoids.OM[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.OM.subt, kmedoids.OM.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n", main='OM.subt')
 axis(1, at=1:19, labels=2:20)
 
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OM.subc, kmedoids.OM.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OM.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OM.subf, kmedoids.OM.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OM.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OM.subi, kmedoids.OM.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OM.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OM.subig, kmedoids.OM.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OM.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+## OMl
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMl.subt, kmedoids.OMl.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMl.subt')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMl.subc, kmedoids.OMl.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMl.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMl.subf, kmedoids.OMl.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMl.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMl.subi, kmedoids.OMl.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMl.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMl.subig, kmedoids.OMl.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMl.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+## OMsl
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsl.subt, kmedoids.OMsl.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsl.subt')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsl.subc, kmedoids.OMsl.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsl.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsl.subf, kmedoids.OMsl.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsl.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsl.subi, kmedoids.OMsl.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsl.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsl.subig, kmedoids.OMsl.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsl.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+## OMsp
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsp.subt, kmedoids.OMsp.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsp.subt')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsp.subc, kmedoids.OMsp.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsp.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsp.subf, kmedoids.OMsp.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsp.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsp.subi, kmedoids.OMsp.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsp.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMsp.subig, kmedoids.OMsp.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMsp.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+
+## OMst
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMst.subt, kmedoids.OMst.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMst.subt')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMst.subc, kmedoids.OMst.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMst.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMst.subf, kmedoids.OMst.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMst.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMst.subi, kmedoids.OMst.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMst.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.OMst.subig, kmedoids.OMst.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='OMst.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+
+## Ham
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.H.subt, kmedoids.H.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='H.subt')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.H.subc, kmedoids.H.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='H.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.H.subf, kmedoids.H.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='H.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.H.subi, kmedoids.H.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='H.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.H.subig, kmedoids.H.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='H.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.TW.subt, kmedoids.TW.subt[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='TW.subt')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.TW.subc, kmedoids.TW.subc[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='TW.subc')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.TW.subf, kmedoids.TW.subf[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='TW.subf')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.TW.subi, kmedoids.TW.subi[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='TW.subi')
+axis(1, at=1:19, labels=2:20)
+
+silhouette <- rep(NA, 20-1)
+for(k in 1:19) {
+  silhouette[k] <- wcClusterQuality(biofam.TW.subig, kmedoids.TW.subig[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
+}
+plot(silhouette, type="l", xaxt="n", main='TW.subig')
+axis(1, at=1:19, labels=2:20)
+
+
+```
+
+
+```{r}
 
 ## DHD
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.DHD, kmedoids.DHD[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.DHD, kmedoids.DHD[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='DHD')
 axis(1, at=1:19, labels=2:20)
 
 ## CH
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.CH, kmedoids.CH[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.CH, kmedoids.CH[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='CH')
 axis(1, at=1:19, labels=2:20)
 
 ## EU
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.EU, kmedoids.EU[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.EU, kmedoids.EU[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
-axis(1, at=1:19, labels=2:20)
-
-## H
-silhouette <- rep(NA, 20-1)
-for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.H, kmedoids.H[[k+1]]$clustering)$stats["ASW"]
-}
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='EU')
 axis(1, at=1:19, labels=2:20)
 
 ## LP
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.LP, kmedoids.LP[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.LP, kmedoids.LP[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='LP')
 axis(1, at=1:19, labels=2:20)
 
 ## LS
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.LS, kmedoids.LS[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.LS, kmedoids.LS[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='LS')
 axis(1, at=1:19, labels=2:20)
 
 ## N
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.N, kmedoids.N[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.N, kmedoids.N[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='N')
 axis(1, at=1:19, labels=2:20)
 
 ## NT
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.NT, kmedoids.NT[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.NT, kmedoids.NT[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
-axis(1, at=1:19, labels=2:20)
-
-## OMl
-silhouette <- rep(NA, 20-1)
-for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.OMl, kmedoids.OMl[[k+1]]$clustering)$stats["ASW"]
-}
-plot(silhouette, type="l", xaxt="n")
-axis(1, at=1:19, labels=2:20)
-
-## OMsl
-silhouette <- rep(NA, 20-1)
-for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.OMsl, kmedoids.OMsl[[k+1]]$clustering)$stats["ASW"]
-}
-plot(silhouette, type="l", xaxt="n")
-axis(1, at=1:19, labels=2:20)
-
-## OMsp
-silhouette <- rep(NA, 20-1)
-for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.OMsp, kmedoids.OMsp[[k+1]]$clustering)$stats["ASW"]
-}
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='NT')
 axis(1, at=1:19, labels=2:20)
 
 ## RL
 silhouette <- rep(NA, 20-1)
 for(k in 1:19) {
-  silhouette[k] <- wcClusterQuality(biofam.RL, kmedoids.RL[[k+1]]$clustering)$stats["ASW"]
+  silhouette[k] <- wcClusterQuality(biofam.RL, kmedoids.RL[[k+1]]$clustering, weights=aggBiofam$aggWeights)$stats["ASW"]
 }
-plot(silhouette, type="l", xaxt="n")
+plot(silhouette, type="l", xaxt="n",  main='RL')
 axis(1, at=1:19, labels=2:20)
 
 ```
 
+## Cluster Quality plots
+```{r}
+## OM
+plot(qual.OM.subt, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OM.subt')
+plot(qual.OM.subc, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OM.subc')
+plot(qual.OM.subf, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OM.subf')
+plot(qual.OM.subi, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OM.subi')
+plot(qual.OM.subig, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OM.subig')
 
+## OMl
+plot(qual.OMl.subt, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMl.subt')
+plot(qual.OMl.subc, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMl.subc')
+plot(qual.OMl.subf, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMl.subf')
+plot(qual.OMl.subi, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMl.subi')
+plot(qual.OMl.subig, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMl.subig')
+
+
+## OMsl
+plot(qual.OMsl.subt, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsl.subt')
+plot(qual.OMsl.subc, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsl.subc')
+plot(qual.OMsl.subf, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsl.subf')
+plot(qual.OMsl.subi, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsl.subi')
+plot(qual.OMsl.subig, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsl.subig')
+
+## OMsp
+plot(qual.OMsp.subt, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsp.subt')
+plot(qual.OMsp.subc, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsp.subc')
+plot(qual.OMsp.subf, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsp.subf')
+plot(qual.OMsp.subi, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsp.subi')
+plot(qual.OMsp.subig, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMsp.subig')
+
+## OMst
+plot(qual.OMst.subt, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMst.subt')
+plot(qual.OMst.subc, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMst.subc')
+plot(qual.OMst.subf, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMst.subf')
+plot(qual.OMst.subi, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMst.subi')
+plot(qual.OMst.subig, stat=c('ASW', 'HG', 'PBC', 'HC'), main='OMst.subig')
+
+## Ham
+plot(qual.H.subt, stat=c('ASW', 'HG', 'PBC', 'HC'), main='H.subt')
+plot(qual.H.subc, stat=c('ASW', 'HG', 'PBC', 'HC'), main='H.subc')
+plot(qual.H.subf, stat=c('ASW', 'HG', 'PBC', 'HC'), main='H.subf')
+plot(qual.H.subi, stat=c('ASW', 'HG', 'PBC', 'HC'), main='H.subi')
+plot(qual.H.subig, stat=c('ASW', 'HG', 'PBC', 'HC'), main='H.subig')
+
+## TWED
+plot(qual.TW.subt, stat=c('ASW', 'TWG', 'PBC', 'TWC'), main='TW.subt')
+plot(qual.TW.subc, stat=c('ASW', 'TWG', 'PBC', 'TWC'), main='TW.subc')
+plot(qual.TW.subf, stat=c('ASW', 'TWG', 'PBC', 'TWC'), main='TW.subf')
+plot(qual.TW.subi, stat=c('ASW', 'TWG', 'PBC', 'TWC'), main='TW.subi')
+plot(qual.TW.subig, stat=c('ASW', 'TWG', 'PBC', 'TWC'), main='TW.subig')
+
+```
+
+
+```{r}
+
+## DHD
+plot(qual.DHD, stat=c('ASW', 'HG', 'PBC', 'HC'), main='DHD')
+
+## EU
+
+plot(qual.EU, stat=c('ASW', 'HG', 'PBC', 'HC'), main='EU')
+
+## CH
+
+plot(qual.CH, stat=c('ASW', 'HG', 'PBC', 'HC'), main='CH')
+
+## LS
+
+plot(qual.LS, stat=c('ASW', 'HG', 'PBC', 'HC'), main='LS')
+
+## LP
+
+plot(qual.LP, stat=c('ASW', 'HG', 'PBC', 'HC'), main='LP')
+
+## RL
+
+plot(qual.RL, stat=c('ASW', 'HG', 'PBC', 'HC'), main='RL')
+
+## N
+
+plot(qual.N, stat=c('ASW', 'HG', 'PBC', 'HC'), main='N')
+
+## NT
+
+plot(qual.NT, stat=c('ASW', 'HG', 'PBC', 'HC'), main='NT')
+
+## SV
+
+plot(qual.SV, stat=c('ASW', 'HG', 'PBC', 'HC'), main='SV')
+
+```
 
 
 
