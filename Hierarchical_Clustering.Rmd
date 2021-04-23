@@ -90,7 +90,6 @@ uniqueBiofam <- biofam[aggBiofam$aggIndex, 10:25]
 ```{r}
 biofam.seq <- seqdef(uniqueBiofam, weights = aggBiofam$aggWeights)
 
-
 ```
 
 ## Estimating substitution cost
